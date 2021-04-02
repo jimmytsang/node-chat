@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Sample Site</title>
+</head>
+<body>
+    <div>
+        <form id="chatform" action="http://localhost.corp.yahoo.com:3000/sendchat" method="POST">
+            <input type="text" name="message" placeholder="chat here" />
+            <input type="submit" value="Send" />
+        </form>
+    </div>
+    <ul id="showChats"></ul>
+</body>
+<script>
+    console.log('hello this is browser js code');
+
+    let chatform = document.querySelector('#chatform');
+    let showChats = document.querySelector('#showChats');
+
+    chatform.onsubmit = function() {
+        let message = chatform.message.value;
+        console.log('form submitted with message: ', message);
+
+        let inner = `<li>${message}</li>`;
+        showChats.innerHTML += inner;
+        // here you can POST message to db
+    }
+
+    // takes in response of messages to display in browser
+    function processMessage(response) {
+        let messages = response.messages;
+        if (messages.length > 0) {
+            let showChats = document.querySelector('#showChats');
+            let newMessageHtml = '';
+            messages.forEach(message =>  {
+                newMessageHtml += `<li>${response.messages}</li>`;
+            })
+            showChats.innerHTML += newMessageHtml;
+        } else {
+            console.log('have not received message yet, will keep trying');
+        }
+    };
+
+    function longPollFetch(url, messageCount, cb) {
+        var xhr = new XMLHttpRequest();
+        
+        xhr.open('GET', url + '?lastMessageIndex=' + (messageCount - 1), true);
+        xhr.onload = function() {
+            // short poll - request is done!
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    let results = JSON.parse(xhr.responseText);
+                    messageCount += results.messages.length;
+                    console.log(results);
+                    cb(results);
+                } else {
+                    console.log('error on readyState status != 200 ' + xhr.statusText);
+                }
+                longPollFetch(url, messageCount, cb);
+            }
+        };
+        xhr.onerror = function() {
+            console.log('onerror hit');
+        };
+        return xhr.send(null);
+    }
+    
+    longPollFetch('/longpolling', 0, processMessage);
+
+    function sendChat() {
+        console.log('hey', showChats);
+    };
+</script>
+</html>

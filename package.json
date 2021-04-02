@@ -1,0 +1,23 @@
+{
+  "name": "node_chat",
+  "version": "1.0.0",
+  "description": "my very first node.js app built from scratch",
+  "main": "server.js",
+  "scripts": {
+    "test": "npm test",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "hello"
+  ],
+  "author": "Jimmy Tsang",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "eslint": "^7.22.0"
+  }
+}
