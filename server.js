@@ -4,6 +4,7 @@ const path = require('path');
 const PORT = 3000;
 
 var globalMessageStore = {
+    userId: MajonesMessageClass,
     userId: {
         messages: []
         // messages : {
@@ -14,14 +15,13 @@ var globalMessageStore = {
             // how to create an evented object
             // how to extend class in node with events
         // }
-    }
+    },
 };
 
 function createUser(userId) {
+
     if (!globalMessageStore[userId]) {
-        globalMessageStore[userId] = {
-            messages: []
-        };
+        globalMessageStore[userId] = new MajonesMessageClass();
     }
 };
 
@@ -39,8 +39,18 @@ app.get('/longpolling', function(req, res) {
     var userId = req.query.userId;
     var lastMessageIndex = req.query.lastMessageIndex || -1;
 
+    // TODO create a new message class and put these in there!
+    const EventEmitter = require('events');
+    class MessageClass extends EventEmitter {}
+    const MajonesMessageClass = new MessageClass();
+
     createUser(userId);
-    messages = globalMessageStore[userId].messages;
+    messages = globalMessageStore[userId];
+
+    messages.once('newMessage', (newMessage) => {
+        // alert there is a new message
+        return res.json(newMessage)
+    });
 
     // return only unread messages
     if (lastMessageIndex > -1) {
@@ -63,11 +73,8 @@ app.get('/sendchat', function(req, res) {
         globalMessageStore[userId].messages.push(message);
         
         // send json of message to active subscribers
-        let res = globalMessageStore[userId].res
-        if (res && !res.writableFinished) {
-            delete globalMessageStore[userId].res;
-            return res.json({ messages: [message] });
-        }
+        MajonesMessageClass.emit('newMessage', message);
+        
     });
     return res.json({status: 'OK'});
 });
