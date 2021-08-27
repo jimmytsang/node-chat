@@ -5,9 +5,9 @@
 </head>
 <body>
     <div>
-        <form id="chatform" action="http://localhost.corp.yahoo.com:3000/sendchat" method="POST">
+        <form id="chatform" action="/sendchat" method="POST">
             <input type="text" name="message" placeholder="chat here" />
-            <input type="submit" value="Send" />
+            <button type="submit">send chat</button>
         </form>
     </div>
     <ul id="showChats"></ul>
@@ -34,7 +34,7 @@
             let showChats = document.querySelector('#showChats');
             let newMessageHtml = '';
             messages.forEach(message =>  {
-                newMessageHtml += `<li>${response.messages}</li>`;
+                newMessageHtml += `<li>${message.messageText} ${message.timeStamp}</li>`;
             })
             showChats.innerHTML += newMessageHtml;
         } else {
@@ -45,14 +45,13 @@
     function longPollFetch(url, messageCount, cb) {
         var xhr = new XMLHttpRequest();
         
-        xhr.open('GET', url + '?lastMessageIndex=' + (messageCount - 1), true);
+        // lastReadyMessageSince= timestamp
+        xhr.open('GET', url + '?lastReadMessageIndex=' + messageCount, true);
         xhr.onload = function() {
-            // short poll - request is done!
             if (xhr.readyState === 4) {
                 if (xhr.status === 200) {
                     let results = JSON.parse(xhr.responseText);
                     messageCount += results.messages.length;
-                    console.log(results);
                     cb(results);
                 } else {
                     console.log('error on readyState status != 200 ' + xhr.statusText);
@@ -67,9 +66,5 @@
     }
     
     longPollFetch('/longpolling', 0, processMessage);
-
-    function sendChat() {
-        console.log('hey', showChats);
-    };
 </script>
 </html>

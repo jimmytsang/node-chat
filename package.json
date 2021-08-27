@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "test": "npm test",
-    "start": "node server.js"
+    "start": "node --inspect=9222 server.js"
   },
   "keywords": [
     "hello"

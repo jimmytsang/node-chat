@@ -2,81 +2,70 @@ const express = require('express');
 const app = express();
 const path = require('path');
 const PORT = 3000;
+const bodyParser = require('body-parser')
+var User = require('./UserClass.js');
 
-var globalMessageStore = {
-    userId: MajonesMessageClass,
-    userId: {
-        messages: []
-        // messages : {
-            // messageId: "",
-            // onNewMessage: () => {},
-            // listeners of my messages
-            // event when i emit new messages
-            // how to create an evented object
-            // how to extend class in node with events
-        // }
-    },
-};
+var globalMessageStore = {};
 
-function createUser(userId) {
-
-    if (!globalMessageStore[userId]) {
-        globalMessageStore[userId] = new MajonesMessageClass();
-    }
-};
-
+app.use(bodyParser.urlencoded({ extended: true }));
 app.set('views', path.join(__dirname, 'views'));
 
 app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname + '/views/index.html'));
 });
 
-// create user
-// returns json of messages to the client
+app.get('/workloadgroup-policies', function(req, res) {
+    res.sendFile(path.join(__dirname + '/views/workloadgroup-policies.html'));
+});
+
+function createUser(userId) {
+    if (!globalMessageStore[userId]) {
+        globalMessageStore[userId] = new User(userId);
+    }
+};
+
+// create user, returns json of messages to the client
 // subscribe to server to return messages when global message store populates
 app.get('/longpolling', function(req, res) {
+    var user;
     var messages;
     var userId = req.query.userId;
-    var lastMessageIndex = req.query.lastMessageIndex || -1;
+    var lastReadMessageIndex;
 
-    // TODO create a new message class and put these in there!
-    const EventEmitter = require('events');
-    class MessageClass extends EventEmitter {}
-    const MajonesMessageClass = new MessageClass();
+    userId = 'Jimmy';
 
     createUser(userId);
-    messages = globalMessageStore[userId];
+    user = globalMessageStore[userId];
+    lastReadMessageIndex = req.query.lastReadMessageIndex || 0;
 
-    messages.once('newMessage', (newMessage) => {
-        // alert there is a new message
-        return res.json(newMessage)
-    });
+    let newMessageCb = (newMessage) => {
+        // TODO: alert other users that there is a new message!
+        res.json({ messages: [newMessage] });
+    };
 
     // return only unread messages
-    if (lastMessageIndex > -1) {
-        messages = messages.slice(lastMessageIndex + 1);
-    }
+    messages = user.messages.slice(lastReadMessageIndex);
 
     if (messages.length > 0) {
-        return res.json({ messages: messages });
+        res.json({ messages: messages });
+    } else { 
+        // subscribes this user to new messages
+        user.once('newMessage', newMessageCb);
+        req.on('close', function() {
+            user.removeListener('newMessage', newMessageCb);
+        });
     }
-    // subscribe to server awaiting server response from /sendchat
-    globalMessageStore[userId].res = res;
 });
 
 // populates everyone's messages in global message store 
 // if active subscribers, return json of messages to the subscriber
-app.get('/sendchat', function(req, res) {
-    let message = req.query.message;
-    // push message to all users
+app.post('/sendchat', function(req, res) {
+    let message = req.body.message;
+    // write new message to all users
     Object.keys(globalMessageStore).forEach(userId => {
-        globalMessageStore[userId].messages.push(message);
-        
-        // send json of message to active subscribers
-        MajonesMessageClass.emit('newMessage', message);
-        
+        globalMessageStore[userId].writeNewMessage(message);
     });
-    return res.json({status: 'OK'});
+    return res.redirect('/');
 });
 
 app.listen(PORT, function() {
