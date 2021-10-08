@@ -21,9 +21,6 @@
     chatform.onsubmit = function() {
         let message = chatform.message.value;
         console.log('form submitted with message: ', message);
-
-        let inner = `<li>${message}</li>`;
-        showChats.innerHTML += inner;
         // here you can POST message to db
     }
 
