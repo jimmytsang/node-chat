@@ -1,4 +1,5 @@
 const express = require('express');
+const cookieParser = require('cookie-parser')
 const app = express();
 const path = require('path');
 const PORT = 3000;
@@ -8,21 +9,44 @@ var User = require('./user.js');
 global.messageStore = {};
 global.userStore = {};
 
+app.use(cookieParser());
+
+// Dangerous bodyparser
 app.use(bodyParser.urlencoded({ extended: true }));
+
 // app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/login', function(req, res) {
+    // TODO: Figure out how to pass variables to html files look into templating engine
+
+    res.sendFile(path.join(__dirname + '/views/login.html'));
+});
+
+app.post('/login', function(req, res) {
+    let userId = req.body.userId;
+    if (!User.exists(userId)) {
+        createUser(userId);
+    }
+    res.cookie('userId', userId);
+    return res.redirect('/?userId=' + userId);
+});
+
+app.use(function(req, res, next) {
+    if (!req.cookies.userId) {
+        res.redirect(302, '/login');
+    } else {
+        next()
+    }
+});
 
 app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname + '/views/index.html'));
 });
 
-app.get('/workloadgroup-policies', function(req, res) {
-    res.sendFile(path.join(__dirname + '/views/workloadgroup-policies.html'));
-});
-
 function createUser(userId) {
-    if (!globalMessageStore[userId]) {
-        globalMessageStore[userId] = new User(userId);
+    if (!User.exists(userId)) {
+        User.userStore[userId] = new User(userId);
     }
 };
 
@@ -31,20 +55,21 @@ function createUser(userId) {
 app.get('/longpolling', function(req, res) {
     var user;
     var messages;
-    var userId = req.params.userId;
+    var userId = req.cookies.userId;
     var lastReadMessageIndex;
 
-    // TODO: user needs to login before entering chat interface
-    // app needs to ask for username
     if (!userId) {
-        // Ask Matt why is this not redirecting to /login?
-        return res.redirect('/login');
+        // Question: why is this not redirecting to /login?
+        res.redirect(302, '/login');
     } else {
-        user = globalMessageStore[userId];
+        if (userId && !User.exists(userId)) {
+            createUser(userId);
+        }
+        user = User.userStore[userId];
         lastReadMessageIndex = req.query.lastReadMessageIndex || 0;
 
         let newMessageCb = (newMessage) => {
-            // TODO: alert other users that there is a new message!
+            // Later Problem: alert other users that there is a new message!
             res.json({ messages: [newMessage] });
         };
 
@@ -63,42 +88,21 @@ app.get('/longpolling', function(req, res) {
     }
 });
 
-app.get('/login', function(req, res) {
-
-
-
-    // GOAL: before loading intial page, get user to login with username then display username in chat page
-    // Figure out why long polling route doesn't redirect to login
-    // Figure out send login to server
-        // 1. create user if username doesnt exist
-        // 2. pass username variable to index.html (how? Does this require templating engine?)
-    // Figure out how to pass variables to html files look into templating engine
-
-
-
-    let loginPagePath = path.join(__dirname + '/views/login.html')
-    return res.sendFile(loginPagePath);
-});
-
 // populates everyone's messages in global message store 
 // if active subscribers, return json of messages to the subscriber
 app.post('/sendchat', function(req, res) {
-    let userId = req.body.userId;
+    let userId = req.cookies.userId;
+    let toUserId = req.body.toUserId;
     let message = req.body.message;
-    // write new message to all users
-    Object.keys(globalMessageStore).forEach(userKey => {
-        globalMessageStore[userKey].writeNewMessage(message + ` - from ${userId}`);
-    });
-    // question for jimmy, do we need to redirect and refresh the page?
-    return res.redirect('/');
-});
+    let user = User.userStore[userId];
 
-app.post('/login', function(req, res) {
-    let username = req.body.username;
-    if (!globalMessageStore[username]) {
-        createUser(username);
+    if (User.exists(toUserId)) {
+        user.writeNewMessage(message, toUserId);
+    } else {
+        throw 'the user you are writing to does not exist';
     }
-    return res.status(200).send(`<div>hello ${username}</div>`);
+
+    return res.redirect('/');
 });
 
 app.listen(PORT, function() {

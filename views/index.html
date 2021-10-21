@@ -6,7 +6,8 @@
 <body>
     <div>
         <form id="chatform" action="/sendchat" method="POST">
-            <input type="text" name="message" placeholder="chat here" />
+            <input type="text" required name="message" placeholder="chat here" />
+            <input type="text" required name="toUserId" placeholder="send message to this user" />
             <button type="submit">send chat</button>
         </form>
     </div>
@@ -30,8 +31,8 @@
         if (messages.length > 0) {
             let showChats = document.querySelector('#showChats');
             let newMessageHtml = '';
-            messages.forEach(message =>  {
-                newMessageHtml += `<li>${message.messageText} ${message.timeStamp}</li>`;
+            messages.forEach(messageObj =>  {
+                newMessageHtml += `<li>${messageObj.message} - from ${messageObj.createdBy} to ${messageObj.toUser} at time ${messageObj.createdDate}</li>`;
             })
             showChats.innerHTML += newMessageHtml;
         } else {
