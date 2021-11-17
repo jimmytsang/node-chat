@@ -4,6 +4,7 @@ const app = express();
 const path = require('path');
 const PORT = 3000;
 const bodyParser = require('body-parser')
+const mustacheExpress = require('mustache-express');
 var User = require('./user.js');
 
 global.messageStore = {};
@@ -14,13 +15,14 @@ app.use(cookieParser());
 // Dangerous bodyparser
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// app.set('views', path.join(__dirname, 'views'));
+app.engine('html', mustacheExpress());
+app.set('view engine', 'mustache');
+app.set('views', __dirname + '/views');
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/login', function(req, res) {
-    // TODO: Figure out how to pass variables to html files look into templating engine
-
-    res.sendFile(path.join(__dirname + '/views/login.html'));
+    res.render('login.html', {hello: 'hello mustache'});
 });
 
 app.post('/login', function(req, res) {
