@@ -56,10 +56,14 @@ class User extends EventEmitter {
         // user creates a new Message(message) and store into Messages where userId === Messages.userId
         let message = new Message(newMessage, this.id, toUserId);
         Message.messageStore.push(message);
-        this.messages.push(message); // Feels weird pushing message to two diff places
-
+        if (toUserId !== this.id) {
+            let toUser = User.userStore[toUserId];
+            toUser.emit('newMessage', message);
+            toUser.messages.push(message);
+        }
         // send message to active subscribers
         this.emit('newMessage', message);
+        this.messages.push(message);
     }
 }
 

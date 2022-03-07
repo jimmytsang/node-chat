@@ -42,6 +42,8 @@ app.use(function(req, res, next) {
     }
 });
 
+// goal: mozilla firefox and chrome different users talk to each other
+
 app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname + '/views/index.html'));
 });
